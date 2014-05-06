@@ -4,8 +4,8 @@ set(PROJECT_NAME segmentation)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-set(CMAKE_C_COMPILER "gcc-4.9")
-set(CMAKE_CXX_COMPILER "g++-4.9")
+#set(CMAKE_C_COMPILER "gcc-4.9")
+#set(CMAKE_CXX_COMPILER "g++-4.9")
 
 # Boost
 set(Boost_USE_STATIC_LIBS   ON)

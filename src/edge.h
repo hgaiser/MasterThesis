@@ -3,10 +3,9 @@
 
 class Edge {
 public:
-	Edge(uint32_t a, uint32_t b, float w) : a_(a), b_(b), weight_(w) {}
 	Edge() {}
 
-	inline float weight() { return weight_; }
+	inline float weight() const { return weight_; }
 	inline uint32_t first() { return a_; }
 	inline uint32_t second() { return b_; }
 
@@ -14,6 +13,9 @@ public:
 	inline void setSecond(int b) { b_ = b; }
 	inline void setWeight(float w) { weight_ = w; }
 
+	bool operator<(const Edge & b) const {
+		return weight() < b.weight();
+	}
 private:
 	uint32_t a_;
 	uint32_t b_;
