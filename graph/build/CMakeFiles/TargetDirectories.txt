@@ -1,2 +1,0 @@
-/Users/hans/MasterThesis/code/cpp/graph/build/CMakeFiles/segment.dir
-/Users/hans/MasterThesis/code/cpp/graph/build/CMakeFiles/segment_felz.dir
