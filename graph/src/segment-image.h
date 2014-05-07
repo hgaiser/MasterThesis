@@ -5,6 +5,7 @@
 #include <map>
 
 #define square(x) ((x)*(x))
+#define COLORED_OUTPUT
 
 // random color
 cv::Vec3b random_rgb(){ 
@@ -92,9 +93,10 @@ cv::Mat segment_image(cv::Mat image, float sigma, float c, int min_size) {
 		}
 	}
 
-	cv::Mat output(image.size(), CV_16UC1);
+#ifdef COLORED_OUTPUT
+	cv::Mat output(image.size(), CV_8UC3);
 
-	/*// pick random colors for each component
+	// pick random colors for each component
 	std::vector<cv::Vec3b> colors;
 	colors.resize(image.total());
 	for (int i = 0; i < image.total(); i++)
@@ -105,8 +107,9 @@ cv::Mat segment_image(cv::Mat image, float sigma, float c, int min_size) {
 			int comp = find(clusters, y * image.cols + x);
 			output.at<cv::Vec3b>(y, x) = colors[comp];
 		}
-	}*/
-
+	}
+#else
+	cv::Mat output(image.size(), CV_16UC1);
 	std::map<int, uint16_t> cluster_ids;
 	uint16_t max_id = 1;
 
@@ -118,6 +121,7 @@ cv::Mat segment_image(cv::Mat image, float sigma, float c, int min_size) {
 			output.at<uint16_t>(y, x) = cluster_ids[comp];
 		}
 	}
+#endif
 
 	return output;
 }
