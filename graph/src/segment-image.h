@@ -2,6 +2,7 @@
 #define SEGMENT_IMAGE
 
 #include "segment-graph.h"
+#include <map>
 
 #define square(x) ((x)*(x))
 
@@ -32,9 +33,8 @@ static inline float diff(cv::Mat image, int p1, int p2) {
  * sigma: to smooth the image.
  * c: constant for treshold function.
  * min_size: minimum component size (enforced by post-processing stage).
- * num_ccs: number of connected components in the segmentation.
  */
-cv::Mat segment_image(cv::Mat image, float sigma, float c, int min_size, int & num_ccs) {
+cv::Mat segment_image(cv::Mat image, float sigma, float c, int min_size) {
 	image.convertTo(image, CV_32FC3);
 	cv::GaussianBlur(image, image, cv::Size(5, 5), sigma);
 	//image = smooth(image, sigma);
@@ -78,10 +78,8 @@ cv::Mat segment_image(cv::Mat image, float sigma, float c, int min_size, int & n
 		}
 	}
 
-	num_ccs = image.total();
-
 	// segment
-	std::vector<Cluster> clusters = segment_graph(image.total(), index, edges, c, num_ccs);
+	std::vector<Cluster> clusters = segment_graph(image.total(), index, edges, c);
 
 	// post process small components
 	if (min_size) {
@@ -90,14 +88,13 @@ cv::Mat segment_image(cv::Mat image, float sigma, float c, int min_size, int & n
 			int b = find(clusters, edges[i].second());
 			if ((a != b) && ((clusters[a].size() < min_size) || (clusters[b].size() < min_size))) {
 				join(clusters, a, b);
-				num_ccs--;
 			}
 		}
 	}
 
-	cv::Mat output(image.size(), CV_8UC3);
+	cv::Mat output(image.size(), CV_16UC1);
 
-	// pick random colors for each component
+	/*// pick random colors for each component
 	std::vector<cv::Vec3b> colors;
 	colors.resize(image.total());
 	for (int i = 0; i < image.total(); i++)
@@ -108,7 +105,19 @@ cv::Mat segment_image(cv::Mat image, float sigma, float c, int min_size, int & n
 			int comp = find(clusters, y * image.cols + x);
 			output.at<cv::Vec3b>(y, x) = colors[comp];
 		}
-	}  
+	}*/
+
+	std::map<int, uint16_t> cluster_ids;
+	uint16_t max_id = 1;
+
+	for (int y = 0; y < image.rows; y++) {
+		for (int x = 0; x < image.cols; x++) {
+			int comp = find(clusters, y * image.cols + x);
+			if (cluster_ids.find(comp) == cluster_ids.end())
+				cluster_ids[comp] = max_id++;
+			output.at<uint16_t>(y, x) = cluster_ids[comp];
+		}
+	}
 
 	return output;
 }

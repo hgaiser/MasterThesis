@@ -38,7 +38,7 @@ void join(std::vector<Cluster> & clusters, int x, int y) {
  * edges: array of edges.
  * c: constant for treshold function.
  */
-std::vector<Cluster> segment_graph(int num_vertices, int num_edges, std::vector<Edge> & edges, float c, int & num) { 
+std::vector<Cluster> segment_graph(int num_vertices, int num_edges, std::vector<Edge> & edges, float c) { 
 	// sort edges by weight
 	std::sort(edges.begin(), edges.begin() + num_edges);
 
@@ -65,7 +65,6 @@ std::vector<Cluster> segment_graph(int num_vertices, int num_edges, std::vector<
 				join(clusters, a, b);
 				a = find(clusters, a);
 				clusters[a].setThreshold(edge.weight() + THRESHOLD(clusters[a].size(), c));
-				num--;
 			}
 		}
 	}

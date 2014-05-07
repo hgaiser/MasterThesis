@@ -13,23 +13,23 @@ set(Boost_USE_MULTITHREADED ON)
 find_package(Boost COMPONENTS python REQUIRED)
 
 find_package(OpenCV REQUIRED)
-#find_package(PythonLibs REQUIRED)
-#find_package(NumPy REQUIRED)
+find_package(PythonLibs REQUIRED)
+find_package(NumPy REQUIRED)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -O3")
 
-#include_directories(
-#	${PYTHON_INCLUDE_DIRS}
-#	${NUMPY_INCLUDE_DIRS}
-#)
+include_directories(
+	${PYTHON_INCLUDE_DIRS}
+	${NUMPY_INCLUDE_DIRS}
+)
 
-#add_library(segmentation_tree MODULE src/tree.cpp)
-#set_target_properties(segmentation_tree PROPERTIES PREFIX "")
-#target_link_libraries(segmentation_tree 
-#	${Boost_LIBRARIES}
-#	${OpenCV_LIBRARIES}
-#	${PYTHON_LIBRARIES}
-#)
+add_library(segment_felz MODULE src/segment.cpp)
+set_target_properties(segment_felz PROPERTIES PREFIX "")
+target_link_libraries(segment_felz
+	${Boost_LIBRARIES}
+	${OpenCV_LIBRARIES}
+	${PYTHON_LIBRARIES}
+)
 
 add_executable(segment src/segment.cpp)
 target_link_libraries(segment
