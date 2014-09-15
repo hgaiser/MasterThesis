@@ -1,36 +1,13 @@
-#define DEBUG 1
+//#define DEBUG
 
 #include "CVBoostConverter.hpp"
 #include <boost/python.hpp>
 #include <opencv2/opencv.hpp>
 #include <unordered_map>
 #include "edge.h"
+#include "adjacency.h"
 
 using namespace boost::python;
-
-
-class AdjacencyMatrix : public std::vector<Edge> {
-public:
-	AdjacencyMatrix(int n) {
-		this->n = n;
-		resize((n + 1)*n/2);
-	}
-
-	Edge& get(int i, int j) {
-		int tmp = i > j ? j : i;
-		j = i > j ? i : j;
-		i = tmp;
-		int ind = index(i, j);
-		return operator[](ind);
-	}
-
-protected:
-	int n;
-
-	int index(int i, int j) {
-		return (n * i) + j - ((i * (i+1)) / 2); 
-	}
-};
 
 void updateSurface(cv::Point p, int s, std::unordered_map<int, std::pair<cv::Point, cv::Point>> & surfaces, cv::Size size) {
 	cv::Point p1, p2;
@@ -51,12 +28,13 @@ void updateSurface(cv::Point p, int s, std::unordered_map<int, std::pair<cv::Poi
 cv::Mat makeTree(cv::Mat s, cv::Mat e) {
 	if (s.type() != CV_32SC1) {
 		std::cerr << "Input matrix should be 32 bit integer." << std::endl;
-		return cv::Mat::zeros(10,10,CV_8UC1);
+		return cv::Mat();
 	}
 
 	double n = 0;
 	cv::minMaxLoc(s, nullptr, &n);
-	cv::Mat edges = cv::Mat::zeros(s.size(), CV_8UC1);
+	n++;
+	//cv::Mat edges = cv::Mat::zeros(s.size(), CV_8UC1);
 	AdjacencyMatrix adjacency(n);
 	std::unordered_map<int, std::pair<cv::Point, cv::Point>> surfaces;
 
@@ -65,12 +43,16 @@ cv::Mat makeTree(cv::Mat s, cv::Mat e) {
 	for (int i = 0; i < nonzero.total(); i++) {
 		cv::Point p = nonzero.at<cv::Point>(i);
 
-		if (s.at<int>(p.y-1, p.x) > 0 && s.at<int>(p.y+1, p.x) > 0 && 
-			s.at<int>(p.y-1, p.x) != s.at<int>(p.y+1, p.x)) {
-			edges.at<uint8_t>(p.y, p.x) = 255;
+		// skip edge cases
+		if (p.x == 0 || p.x == s.cols - 1 ||
+			p.y == 0 || p.y == s.rows - 1)
+			continue;
 
-			int a = s.at<int>(p.y-1, p.x);
-			int b = s.at<int>(p.y+1, p.x);
+		// up/down are different clusters?
+		int a = s.at<int>(p.y-1, p.x);
+		int b = s.at<int>(p.y+1, p.x);
+		if (a > 0 && b > 0 && a != b) {
+			//edges.at<uint8_t>(p.y, p.x) = 255;
 
 			updateSurface(p, a, surfaces, s.size());
 			updateSurface(p, b, surfaces, s.size());
@@ -79,19 +61,20 @@ cv::Mat makeTree(cv::Mat s, cv::Mat e) {
 			c.edges.push_back(e.at<uint8_t>(p));
 			c.updateBox(p);
 		}
-		else if (s.at<int>(p.y, p.x - 1) > 0 && s.at<int>(p.y, p.x + 1) > 0 && 
-			s.at<int>(p.y, p.x - 1) != s.at<int>(p.y, p.x + 1)) {
-			edges.at<uint8_t>(p.y, p.x) = 255;
+		// left/right are different clusters?
+		else {
+			a = s.at<int>(p.y, p.x - 1);
+			b = s.at<int>(p.y, p.x + 1);
+			if (a > 0 && b > 0 && a != b) {
+				//edges.at<uint8_t>(p.y, p.x) = 255;
 
-			int a = s.at<int>(p.y, p.x-1);
-			int b = s.at<int>(p.y, p.x+1);
+				updateSurface(p, a, surfaces, s.size());
+				updateSurface(p, b, surfaces, s.size());
 
-			updateSurface(p, a, surfaces, s.size());
-			updateSurface(p, b, surfaces, s.size());
-
-			Edge & c = adjacency.get(a, b);
-			c.edges.push_back(e.at<uint8_t>(p));
-			c.updateBox(p);
+				Edge & c = adjacency.get(a, b);
+				c.edges.push_back(e.at<uint8_t>(p));
+				c.updateBox(p);
+			}
 		}
 	}
 
@@ -214,22 +197,20 @@ cv::Mat makeTree(cv::Mat s, cv::Mat e) {
 	return result;
 }
 
-static void init_ar()
-{
-    Py_Initialize();
-    import_array();
+static void init_ar() {
+	Py_Initialize();
+	import_array();
 }
 
-BOOST_PYTHON_MODULE(segmentation_tree)
-{
-    init_ar();
+BOOST_PYTHON_MODULE(segmentation_tree) {
+	init_ar();
 
 	//initialize converters
 	to_python_converter<cv::Mat,
 		bcvt::matToNDArrayBoostConverter>();
 		bcvt::matFromNDArrayBoostConverter();
 
-    def("tree", makeTree);
+	def("tree", makeTree);
 }
 
 int main(int argc, char * argv[]) {
@@ -254,8 +235,11 @@ int main(int argc, char * argv[]) {
 	cv::imshow("Segmentation", segmentation);
 	cv::imshow("Edge", edge);
 
+	cv::Mat tree;
 	std::clock_t begin = std::clock();
-	cv::Mat tree = makeTree(segmentation, edge);
+	for (int i = 0; i < 1; i++) {
+		tree = makeTree(segmentation, edge);
+	}
 	std::clock_t end = std::clock();
 	std::cout << tree.rows << " surfaces detected." << std::endl;
 	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
