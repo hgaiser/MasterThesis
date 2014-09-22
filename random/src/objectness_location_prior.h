@@ -42,8 +42,8 @@ public:
 			}
 		}
 
-		uint32_t radius = (image.cols*image.cols + image.rows*image.rows) / 4;
-		cv::Point center = cv::Point(image.cols / 2, image.rows / 2);
+		//uint32_t radius = (image.cols*image.cols + image.rows*image.rows) / 4;
+		//cv::Point center = cv::Point(image.cols / 2, image.rows / 2);
 
 		float sum = 0.f;
 		for (const auto & s: segments) {
@@ -51,8 +51,8 @@ public:
 			cv::rectangle(mask, s.min_p, s.max_p, cv::Scalar(1), CV_FILLED);
 			float score = cv::mean(likelihood, mask)[0];
 
-			cv::Point diff = (s.min_p + s.max_p) * 0.5 - center;
-			score *= exp(-diff.dot(diff) / float(radius) * deviation);
+			//cv::Point diff = (s.min_p + s.max_p) * 0.5 - center;
+			//score *= exp(-diff.dot(diff) / float(radius) * deviation);
 
 			sum += score;
 			prior.insert({s.id, score});

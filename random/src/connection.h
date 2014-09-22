@@ -5,8 +5,8 @@
 class Connection
 {
 public:
-	Connection(const Segment & a_, const Segment & b_, uint8_t flags) :
-		a(a_.id), b(b_.id), similarity(exp(Segment::computeSimilarity(a_, b_, flags)))
+	Connection(const Segment & a_, const Segment & b_, uint8_t flags, const cv::Mat & weights) :
+		a(a_.id), b(b_.id), similarity(exp(Segment::computeSimilarity(a_, b_, flags, weights)))
 	{
 	}
 

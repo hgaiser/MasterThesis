@@ -13,12 +13,16 @@
 
 using namespace boost::python;
 
-//#define DEBUG 1
 
 std::random_device rd_;
 std::mt19937 gen_(rd_());
 
-cv::Mat get_bboxes_(cv::Mat image, cv::Mat seg, cv::Mat edge, uint8_t flags, uint32_t n, std::string selection_prior) {
+UniformPrior up;
+LocationPrior lp;
+ObjectnessPrior op;
+ObjectnessLocationPrior olp;
+
+cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & edge, uint8_t flags, const cv::Mat & weights, uint32_t n, std::string selection_prior) {
 	double max_id_;
 	cv::minMaxIdx(seg, nullptr, &max_id_);
 	int max_id = max_id_;
@@ -82,24 +86,27 @@ cv::Mat get_bboxes_(cv::Mat image, cv::Mat seg, cv::Mat edge, uint8_t flags, uin
 	SelectionPriorMap prior;
 
 	if (selection_prior == "uniform") {
-		UniformPrior up;
 		prior = up.computeSelectionPrior(image, segments);
 	}
 	else if (selection_prior == "location") {
-		LocationPrior lp;
 		prior = lp.computeSelectionPrior(image, segments);
 	}
 	else if (selection_prior == "objectness") {
-		ObjectnessPrior op;
 		prior = op.computeSelectionPrior(image, segments);
 	}
-	else if (selection_prior == "objectness-location") {
-		ObjectnessLocationPrior olp;
+	else if (selection_prior == "objectness-slow") {
 		prior = olp.computeSelectionPrior(image, segments);
 	}
 	else {
 		throw std::runtime_error("Unknown selection prior method: " + selection_prior);
 	}
+#ifdef DEBUG
+	prior.visualize(seg);
+#endif
+
+#ifdef DEBUG
+	cv::namedWindow("SelectionLikelihood", cv::WINDOW_AUTOSIZE);
+#endif
 
 	Segment s;
 	for (uint32_t i = 0; i < n; i++) {
@@ -108,12 +115,36 @@ cv::Mat get_bboxes_(cv::Mat image, cv::Mat seg, cv::Mat edge, uint8_t flags, uin
 		cv::Rect r(s.min_p, s.max_p);
 
 		while (stop.stop(image, r) == false) {
+#ifdef DEBUG
+			cv::Mat red = edge * 0.5;
+			cv::Mat green;
+			s.mask.copyTo(green);
+			green *= 255;
+#endif
 			float sum = 0.f;
 			std::vector<Connection> connections;
 			for (auto n: s.neighbours) {
-				connections.push_back(Connection(s, segments[n], flags));
+				connections.push_back(Connection(s, segments[n], flags, weights));
 				sum += (connections.end() - 1)->similarity;
 			}
+
+#ifdef DEBUG
+			cv::Mat blue = cv::Mat::zeros(seg.size(), CV_8UC1);
+			float max_sim = 0.f;
+			for (auto & c: connections) {
+				if (c.similarity > max_sim)
+					max_sim = c.similarity;
+			}
+			for (auto & c: connections) {
+				blue += segments[c.b].mask * 255 * (c.similarity / max_sim);
+				std::cout << c.similarity << std::endl;
+			}
+			std::cout << std::endl;
+			cv::Mat visualization;
+			cv::merge({blue, green, red}, visualization);
+			cv::imshow("SelectionLikelihood", visualization);
+			cv::waitKey();
+#endif
 
 			std::uniform_real_distribution<float> dis(0.f, sum);
 			float rnd = dis(gen_);
@@ -154,13 +185,13 @@ cv::Mat get_bboxes_(cv::Mat image, cv::Mat seg, cv::Mat edge, uint8_t flags, uin
 	return bboxes;
 }
 
-PyObject * get_bboxes(PyObject * image_, PyObject * seg_, PyObject * edge_, uint8_t flags, uint32_t n, std::string selection_prior) {
+PyObject * get_bboxes(PyObject * image_, PyObject * seg_, PyObject * edge_, uint8_t flags, PyObject * weights_, uint32_t n, std::string selection_prior) {
 	NDArrayConverter cvt;
-	cv::Mat image, seg, edge;
-	image = cvt.toMat(image_);
-	seg = cvt.toMat(seg_);
-	edge = cvt.toMat(edge_);
-	return cvt.toNDArray(get_bboxes_(image, seg, edge, flags, n, selection_prior));
+	cv::Mat image   = cvt.toMat(image_);
+	cv::Mat seg     = cvt.toMat(seg_);
+	cv::Mat edge    = cvt.toMat(edge_);
+	cv::Mat weights = cvt.toMat(weights_);
+	return cvt.toNDArray(get_bboxes_(image, seg, edge, flags, weights, n, selection_prior));
 }
 
 static void init_ar() {
@@ -186,6 +217,14 @@ int main(int argc, char * argv[]) {
 	uint8_t iterations = atoi(argv[4]);
 	std::string selection_prior = std::string(argv[5]);
 
+	cv::Mat weights(1, 5, CV_32FC1);
+	weights.at<float>(0) = -0.00697891f;
+	weights.at<float>(1) = 0.f;
+	weights.at<float>(2) = 6.65155577f;
+	weights.at<float>(3) = 1.16613659f;
+	weights.at<float>(4) = -7.59423175f;
+	weights = cv::Mat::ones(1, 5, CV_32FC1);
+
 // 	cv::namedWindow("Image", cv::WINDOW_NORMAL);
 // 	cv::imshow("Image", (seg == 338) * 255);
 // 	cv::waitKey();
@@ -193,7 +232,7 @@ int main(int argc, char * argv[]) {
 // 	cv::namedWindow("Image", cv::WINDOW_NORMAL);
 //	while (cv::waitKey() != 'q') {
 		std::clock_t begin = std::clock();
-		cv::Mat bboxes = get_bboxes_(image, seg, edge, COLOR_SIMILARITY | TEXTURE_SIMILARITY/* | SIZE_SIMILARITY | BBOX_SIMILARITY*/, iterations, "objectness"); 
+		cv::Mat bboxes = get_bboxes_(image, seg, edge, COLOR_SIMILARITY /*| TEXTURE_SIMILARITY*/  | SIZE_SIMILARITY | BBOX_SIMILARITY, weights, iterations, selection_prior); 
 		std::clock_t end = std::clock();
 		double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 		std::cout << "Times passed in seconds: " << elapsed_secs << std::endl;

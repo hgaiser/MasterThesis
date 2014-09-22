@@ -18,7 +18,25 @@ public:
 			}
 		}
 
-		return -1;
+		return size() - 1;
+	}
+
+	void visualize(const cv::Mat & seg) {
+		float max = 0.f;
+		for (auto & p: *this) {
+			if (p.second > max) {
+				max = p.second;
+			}
+		}
+
+		cv::Mat visualization = cv::Mat::zeros(seg.size(), CV_8UC1);
+		for (auto & p: *this) {
+			visualization += (seg == p.first) * (p.second / max);
+		}
+
+		cv::namedWindow("SelectionPrior", cv::WINDOW_AUTOSIZE);
+		cv::imshow("SelectionPrior", visualization);
+		cv::waitKey();
 	}
 
 protected:

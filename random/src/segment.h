@@ -74,30 +74,32 @@ public:
 			return 0.f;
 		}
 
-		float similarity = 0.f;
-
+		float color_similarity = 0.f;
 		if (flags & COLOR_SIMILARITY) {
 			for (uint64_t i = 0; i < a.color_hist.size(); i++)
-				similarity += std::min(a.color_hist[i], b.color_hist[i]);
+				color_similarity += weights.at<float>(0) * std::min(a.color_hist[i], b.color_hist[i]);
 		}
 
+		float texture_similarity = 0.f;
 		if (flags & TEXTURE_SIMILARITY) {
 			for (uint64_t i = 0; i < a.texture_hist.size(); i++)
-				similarity += std::min(a.texture_hist[i], b.texture_hist[i]);
+				texture_similarity += weights.at<float>(1) * std::min(a.texture_hist[i], b.texture_hist[i]);
 		}
 
+		float size_similarity = 0.f;
 		if (flags & SIZE_SIMILARITY) {
-			similarity += 1.f - float(a.size + b.size) / a.im_size;
+			size_similarity += weights.at<float>(2) * (1.f - float(a.size + b.size) / a.im_size);
 		}
 
+		float bbox_similarity = 0.f;
 		if (flags & BBOX_SIMILARITY) {
 			cv::Point min_p(std::min(a.min_p.x, b.min_p.x), std::min(a.min_p.y, b.min_p.y));
 			cv::Point max_p(std::max(a.max_p.x, b.max_p.x), std::max(a.max_p.y, b.max_p.y));
 			int bbox_size = (max_p.x - min_p.x) * (max_p.y - min_p.y);
-			similarity += 1.f - float(bbox_size - a.size - b.size) / a.im_size;
+			bbox_similarity += weights.at<float>(3) * (1.f - float(bbox_size - a.size - b.size) / a.im_size);
 		}
 
-		return similarity;
+		return color_similarity + texture_similarity + size_similarity + bbox_similarity + weights.at<float>(4);
 	}
 
 	static Segment merge(const Segment & a, const Segment & b) {
