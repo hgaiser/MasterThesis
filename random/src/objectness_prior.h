@@ -41,7 +41,7 @@ public:
 		return 0.f;
 	}
 
-	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<Segment> & segments) {
+	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<std::unique_ptr<Segment>> & segments) {
 		SelectionPriorMap prior;
 
 
@@ -68,11 +68,11 @@ public:
 			float score = 0.f;
 			for (int i = 0; i < boxes.size(); i++) {
 				//std::cout << jaccardSimilarity(boxes[i], cv::Vec4i(s.min_p.x, s.min_p.y, s.max_p.x, s.max_p.y)) << std::endl; 
-				if (boxOverlap(boxes[i], cv::Vec4i(s.min_p.x, s.min_p.y, s.max_p.x, s.max_p.y)) > 0.3)
+				if (boxOverlap(boxes[i], cv::Vec4i(s->min_p.x, s->min_p.y, s->max_p.x, s->max_p.y)) > 0.3)
 					score += boxes(i);
 			}
 			sum += score;
-			prior.insert({s.id, score});
+			prior.insert({s->id, score});
 		}
 
 // 		cv::Mat likelihood = cv::Mat::zeros(image.size(), CV_32FC1);

@@ -10,7 +10,7 @@ public:
 		obj.loadTrainedModel("/Users/hans/MasterThesis/code/cpp/random/model/ObjNessB2W8MAXBGR");
 	}
 
-	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<Segment> & segments) {
+	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<std::unique_ptr<Segment>> & segments) {
 		SelectionPriorMap prior;
 
 		cv::Mat likelihood = cv::Mat::zeros(image.size(), CV_32FC1);
@@ -48,14 +48,14 @@ public:
 		float sum = 0.f;
 		for (const auto & s: segments) {
 			cv::Mat mask = cv::Mat::zeros(image.size(), CV_8UC1);
-			cv::rectangle(mask, s.min_p, s.max_p, cv::Scalar(1), CV_FILLED);
+			cv::rectangle(mask, s->min_p, s->max_p, cv::Scalar(1), CV_FILLED);
 			float score = cv::mean(likelihood, mask)[0];
 
 			//cv::Point diff = (s.min_p + s.max_p) * 0.5 - center;
 			//score *= exp(-diff.dot(diff) / float(radius) * deviation);
 
 			sum += score;
-			prior.insert({s.id, score});
+			prior.insert({s->id, score});
 		}
 
 		for (auto & p: prior) {
