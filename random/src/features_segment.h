@@ -96,12 +96,13 @@ public:
 			bbox_similarity += weights.at<float>(3) * (1.f - float(bbox_size - size - b->size) / im_size);
 		}
 
-		return color_similarity + texture_similarity + size_similarity + bbox_similarity + weights.at<float>(4);
+		float weight = color_similarity + texture_similarity + size_similarity + bbox_similarity + weights.at<float>(4);
+		return weight == 0.f ? 1.f : weight;
 	}
 
-	std::unique_ptr<Segment> merge(const Segment * b_) override {
+	std::shared_ptr<Segment> merge(const Segment * b_) override {
 		const FeaturesSegment * b = dynamic_cast<const FeaturesSegment *>(b_);
-		std::unique_ptr<Segment> s_(new FeaturesSegment(-1, nchannels, im_size_cv, flags, weights));
+		std::shared_ptr<Segment> s_ = std::make_shared<FeaturesSegment>(-1, nchannels, im_size_cv, flags, weights);
 		FeaturesSegment * s = dynamic_cast<FeaturesSegment *>(s_.get());
 		s->size = size + b->size;
 #ifdef DEBUG
@@ -120,7 +121,7 @@ public:
 
 		for (uint64_t i = 0; i < texture_hist.size(); i++)
 			s->texture_hist[i] = (size * texture_hist[i] + b->size * b->texture_hist[i]) / s->size;
-		//s->texture_hist = (size * texture_hist + b->size * b->texture_hist) / s->size;
+		//s.texture_hist = (size * texture_hist + b->size * b->texture_hist) / s.size;
 
 
 		s->history.insert(history.begin(), history.end());
@@ -142,13 +143,9 @@ public:
 		return out << "]>";
 	}
 
-	inline cv::Rect bbox() const {
-		return cv::Rect(min_p, max_p);
-	}
-
 	std::vector<float> color_hist;
 	std::vector<float> texture_hist;
 	int nchannels;
 	uint8_t flags;
-	const cv::Mat & weights;
+	cv::Mat weights;
 };

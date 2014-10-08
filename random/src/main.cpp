@@ -1,4 +1,4 @@
-#define DEBUG 1
+// #define DEBUG 1
 
 //#include "CVBoostConverter.hpp"
 #include <random>
@@ -7,7 +7,10 @@
 #include "conversion.h"
 #include <boost/python.hpp>
 
+#include "uniform_segment.h"
 #include "features_segment.h"
+#include "objectness_segment.h"
+
 #include "connection.h"
 #include "adjacency.h"
 #include "uniform_prior.h"
@@ -28,17 +31,51 @@ LocationPrior lp;
 ObjectnessPrior op;
 ObjectnessLocationPrior olp;
 
-cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & edge, uint8_t flags, const cv::Mat & weights, uint32_t n, std::string selection_prior) {
+enum SegmentType {
+	ST_NONE,
+	ST_UNIFORM,
+	ST_FEATURES,
+	ST_OBJECTNESS,
+};
+
+cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & edge, uint8_t flags, const cv::Mat & weights, uint32_t n, std::string selection_prior, std::string segment_type) {
 	double max_id_;
 	cv::minMaxIdx(seg, nullptr, &max_id_);
 	int max_id = max_id_;
 
-	std::vector<std::unique_ptr<Segment>> segments;
+	SegmentType st = ST_NONE;
+	if (segment_type == "uniform")
+		st = ST_UNIFORM;
+	else if (segment_type == "features")
+		st = ST_FEATURES;
+	else if (segment_type == "objectness")
+		st = ST_OBJECTNESS;
+
+	if (st == ST_NONE) {
+		std::cerr << "Invalid segment type: " << segment_type << std::endl;
+		return cv::Mat();
+	}
+
+	if (selection_prior == "objectness-slow" || st == ST_OBJECTNESS)
+		olp.computeLikelihood(image);
+
+	std::vector<std::shared_ptr<Segment>> segments;
 	segments.reserve(max_id);
 	int nchannels = image.channels();
 	cv::Size size = image.size();
 	for (int i = 0; i <= max_id; i++) {
-		segments.push_back(std::unique_ptr<Segment>(new FeaturesSegment(i, nchannels, size, flags, weights)));
+		switch (st) {
+		case ST_UNIFORM:
+			segments.push_back(std::make_shared<UniformSegment>(i, size));
+			break;
+		case ST_FEATURES:
+			segments.push_back(std::make_shared<FeaturesSegment>(i, nchannels, size, flags, weights));
+			break;
+		case ST_OBJECTNESS:
+			segments.push_back(std::make_shared<ObjectnessSegment>(i, size, olp.likelihood));
+			break;
+		default: break;
+		}
 	}
 
 	{
@@ -112,30 +149,26 @@ cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & 
 #endif
 
 	for (uint32_t i = 0; i < n; i++) {
-		std::unique_ptr<Segment> & s = segments[prior.poll()];
+		std::shared_ptr<Segment> s = segments[prior.poll()];
 		RandomStoppingCriterion stop;
 		cv::Rect r(s->min_p, s->max_p);
 
-		while (stop.stop(image, r) == false) {
+		while (s->neighbours.size() && stop.stop(image, r) == false) {
 #ifdef DEBUG
 			cv::Mat red = edge * 0.5;
 			cv::Mat green;
 			s->mask.copyTo(green);
 			green *= 255;
-			std::cout << "history:" << std::endl;
-			for (const auto & h: s->history)
-				std::cout << h << ", ";
-			std::cout << std::endl;
 #endif
 			float sum = 0.f;
 			std::vector<Connection> connections;
-			std::cout << "neighbours:" << std::endl;
+			//std::cout << "neighbours:" << std::endl;
 			for (auto n: s->neighbours) {
 				connections.push_back(Connection(s->id, n, s->computeSimilarity(segments[n].get())));
 				sum += (connections.end() - 1)->similarity;
-				std::cout << n << ", ";
+				//std::cout << n << ", ";
 			}
-			std::cout << std::endl;
+			//std::cout << std::endl;
 
 #ifdef DEBUG
 			cv::Mat blue = cv::Mat::zeros(seg.size(), CV_8UC1);
@@ -204,13 +237,13 @@ cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & 
 	return bboxes;
 }
 
-PyObject * get_bboxes(PyObject * image_, PyObject * seg_, PyObject * edge_, uint8_t flags, PyObject * weights_, uint32_t n, std::string selection_prior) {
+PyObject * get_bboxes(PyObject * image_, PyObject * seg_, PyObject * edge_, uint8_t flags, PyObject * weights_, uint32_t n, std::string selection_prior, std::string segment_type) {
 	NDArrayConverter cvt;
 	cv::Mat image   = cvt.toMat(image_);
 	cv::Mat seg     = cvt.toMat(seg_);
 	cv::Mat edge    = cvt.toMat(edge_);
 	cv::Mat weights = cvt.toMat(weights_);
-	return cvt.toNDArray(get_bboxes_(image, seg, edge, flags, weights, n, selection_prior));
+	return cvt.toNDArray(get_bboxes_(image, seg, edge, flags, weights, n, selection_prior, segment_type));
 }
 
 static void init_ar() {
@@ -225,8 +258,8 @@ BOOST_PYTHON_MODULE(random_selection) {
 }
 
 int main(int argc, char * argv[]) {
-	if (argc != 6) {
-		std::cout << "Usage: " << argv[0] << " <image> <segmentation> <edge> <iterations> <selection_prior: uniform, location, objectness, objectness-location>" << std::endl;
+	if (argc != 7) {
+		std::cout << "Usage: " << argv[0] << " <image> <segmentation> <edge> <iterations> <selection_prior: uniform, location, objectness, objectness-location> <segment_type: uniform, features, objectness>" << std::endl;
 		return 0;
 	}
 
@@ -235,6 +268,7 @@ int main(int argc, char * argv[]) {
 	cv::Mat edge = cv::imread(argv[3], cv::IMREAD_UNCHANGED);
 	uint8_t iterations = atoi(argv[4]);
 	std::string selection_prior = std::string(argv[5]);
+	std::string segment_type = std::string(argv[6]);
 
 	cv::Mat weights(1, 5, CV_32FC1);
 	weights.at<float>(0) = -0.00697891f;
@@ -251,7 +285,7 @@ int main(int argc, char * argv[]) {
 // 	cv::namedWindow("Image", cv::WINDOW_NORMAL);
 //	while (cv::waitKey() != 'q') {
 		std::clock_t begin = std::clock();
-		cv::Mat bboxes = get_bboxes_(image, seg, edge, COLOR_SIMILARITY /*| TEXTURE_SIMILARITY*/  | SIZE_SIMILARITY | BBOX_SIMILARITY, weights, iterations, selection_prior); 
+		cv::Mat bboxes = get_bboxes_(image, seg, edge, COLOR_SIMILARITY /*| TEXTURE_SIMILARITY*/  | SIZE_SIMILARITY | BBOX_SIMILARITY, weights, iterations, selection_prior, segment_type); 
 		std::clock_t end = std::clock();
 		double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 		std::cout << "Times passed in seconds: " << elapsed_secs << std::endl;

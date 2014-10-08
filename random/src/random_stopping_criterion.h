@@ -8,7 +8,7 @@ public:
 	}
 
 	bool stop(const cv::Mat & image, cv::Rect roi) {
-		return dis(gen) > threshold;
+		return (roi.height == image.rows - 1 && roi.width == image.cols - 1) || dis(gen) > threshold;
 	}
 
 protected:

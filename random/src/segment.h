@@ -33,16 +33,20 @@ public:
 		neighbours.insert(n);
 	}
 
-	virtual float computeSimilarity(const Segment * b) = 0;
+	virtual float computeSimilarity(const Segment * b_) = 0;
 
-	virtual std::unique_ptr<Segment> merge(const Segment * b) = 0;
+	virtual std::shared_ptr<Segment> merge(const Segment * b) = 0;
 
-	virtual void finalizeSetup() = 0;
+	virtual void finalizeSetup() {}
 
 	virtual std::ostream & output(std::ostream &) const = 0;
 
 	inline bool empty() const {
 		return size == 0;
+	}
+
+	inline cv::Rect bbox() const {
+		return cv::Rect(min_p, max_p);
 	}
 
 	int size;

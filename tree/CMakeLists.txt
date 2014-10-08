@@ -13,7 +13,7 @@ find_package(OpenCV REQUIRED)
 find_package(PythonLibs REQUIRED)
 find_package(NumPy REQUIRED)
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -g")
+set(CMAKE_CXX_FLAGS "-std=c++11 -O3")
 
 include_directories(
 	${PYTHON_INCLUDE_DIRS}

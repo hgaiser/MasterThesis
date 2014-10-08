@@ -10,10 +10,8 @@ public:
 		obj.loadTrainedModel("/Users/hans/MasterThesis/code/cpp/random/model/ObjNessB2W8MAXBGR");
 	}
 
-	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<std::unique_ptr<Segment>> & segments) {
-		SelectionPriorMap prior;
-
-		cv::Mat likelihood = cv::Mat::zeros(image.size(), CV_32FC1);
+	void computeLikelihood(const cv::Mat & image) {
+		likelihood = cv::Mat::zeros(image.size(), CV_32FC1);
 
 		ValStructVec<float, Vec4i> boxes;
 		obj.getObjBndBoxes(image, boxes, 130);
@@ -41,6 +39,10 @@ public:
 				}
 			}
 		}
+	}
+
+	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<std::shared_ptr<Segment>> & segments) {
+		SelectionPriorMap prior;
 
 		//uint32_t radius = (image.cols*image.cols + image.rows*image.rows) / 4;
 		//cv::Point center = cv::Point(image.cols / 2, image.rows / 2);
@@ -71,6 +73,8 @@ public:
 
 		return prior;
 	}
+
+	cv::Mat likelihood;
 
 protected:
 	Objectness obj;

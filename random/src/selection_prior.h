@@ -51,5 +51,5 @@ std::uniform_real_distribution<float> SelectionPriorMap::dis(0.f, 1.f);
 
 class SelectionPrior {
 public:
-	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<std::unique_ptr<Segment>> & segments) = 0;
+	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<std::shared_ptr<Segment>> & segments) = 0;
 };

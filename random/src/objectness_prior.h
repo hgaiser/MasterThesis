@@ -41,7 +41,7 @@ public:
 		return 0.f;
 	}
 
-	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<std::unique_ptr<Segment>> & segments) {
+	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<std::shared_ptr<Segment>> & segments) {
 		SelectionPriorMap prior;
 
 

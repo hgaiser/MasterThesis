@@ -6,7 +6,7 @@ const float deviation = 4.f;
 
 class LocationPrior : public SelectionPrior {
 public:
-	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<std::unique_ptr<Segment>> & segments) {
+	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<std::shared_ptr<Segment>> & segments) {
 		SelectionPriorMap prior;
 
 		uint32_t radius = (image.cols*image.cols + image.rows*image.rows) / 4;
@@ -21,12 +21,12 @@ public:
 			float likelihood = exp(-diff.dot(diff) / float(radius) * deviation);
 			sum += likelihood;
 			prior.insert({s->id, likelihood});
-			std::cout << "size: " << prior.size() << " id: " << s->id << std::endl;
+// 			std::cout << "size: " << prior.size() << " id: " << s->id << std::endl;
 		}
 
 		for (auto & p: prior) {
 			p.second /= sum;
-			std::cout << "likelihood: " << p.second << std::endl;
+// 			std::cout << "likelihood: " << p.second << std::endl;
 		}
 
 		return prior;
