@@ -18,7 +18,7 @@ typedef std::vector<std::shared_ptr<Segment>> LevelSegments;
 std::random_device rd_;
 std::mt19937 gen_(rd_());
 
-cv::Mat get_bboxes_(const std::vector<cv::Mat> & levels, int n) {
+cv::Mat get_bboxes_(const std::vector<cv::Mat> & levels, int n, float thresh) {
 #ifdef DEBUG
 	cv::namedWindow("Image", cv::WINDOW_NORMAL);
 	for (const auto & lev: levels) {
@@ -96,6 +96,7 @@ cv::Mat get_bboxes_(const std::vector<cv::Mat> & levels, int n) {
 		prior.push_back(lp.computeSelectionPrior(levels[i], level_segments[i]));
 	}
 
+	RandomStoppingCriterion stop(thresh);
 	for (int i = 0; i < n; i++) {
 		int sid = rand() % segments_sum;
 
@@ -108,7 +109,6 @@ cv::Mat get_bboxes_(const std::vector<cv::Mat> & levels, int n) {
 			}
 
 			std::shared_ptr<Segment> s = lev[prior[j].poll()];
-			RandomStoppingCriterion stop;
 
 			while (s->neighbours.size() && stop.stop(seg, s->bbox()) == false) {
 #ifdef DEBUG
@@ -173,7 +173,7 @@ cv::Mat get_bboxes_(const std::vector<cv::Mat> & levels, int n) {
 	return bboxes;
 }
 
-PyObject * get_bboxes(PyObject * levels_, int n) {
+PyObject * get_bboxes(PyObject * levels_, int n, float thresh) {
 	NDArrayConverter cvt;
 	std::vector<cv::Mat> levels;
 
@@ -182,7 +182,7 @@ PyObject * get_bboxes(PyObject * levels_, int n) {
 	for (int i = 0; i < nrlevels; i++)
 		levels.push_back(cvt.toMat(data[i]));
 
-	return cvt.toNDArray(get_bboxes_(levels, n));
+	return cvt.toNDArray(get_bboxes_(levels, n, thresh));
 }
 
 static void init_ar() {

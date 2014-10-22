@@ -4,7 +4,7 @@
 
 class RandomStoppingCriterion : public StoppingCriterion {
 public:
-	RandomStoppingCriterion() : threshold(0.95f) {//threshold(dis(gen)) {
+	RandomStoppingCriterion(float thresh = 0.85f) : threshold(thresh) {//threshold(dis(gen)) {
 	}
 
 	bool stop(const cv::Mat & image, cv::Rect roi) {
