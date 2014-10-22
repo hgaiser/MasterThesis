@@ -18,7 +18,7 @@ cv::Vec3b random_rgb(){
 }
 
 /// Difference between two pixels p1, p2 in image
-static inline float diff(cv::Mat image, int p1, int p2) {
+static inline float diff(const cv::Mat & image, int p1, int p2) {
 	if (image.channels() == 3) {
 		cv::Vec3f a = image.at<cv::Vec3f>(p1);
 		cv::Vec3f b = image.at<cv::Vec3f>(p2);

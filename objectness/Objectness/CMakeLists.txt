@@ -17,7 +17,7 @@ if (${CMAKE_COMPILER_IS_GNUCXX})
   set(OPENMP_FLAG "-fopenmp -std=c++11 -ftree-vectorize")
 endif (${CMAKE_COMPILER_IS_GNUCXX})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPENMP_FLAG} -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPENMP_FLAG} -O3")
 
 #add_executable(${PROJECT_NAME} Main.cpp CmFile.cpp CmShow.cpp DataSetVOC.cpp FilterTIG.cpp Objectness.cpp stdafx.cpp)
 #target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBRARIES} LIBLINEAR BLAS)
