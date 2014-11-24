@@ -9,6 +9,7 @@ enum {
 	TEXTURE_SIMILARITY = 0x2,
 	SIZE_SIMILARITY    = 0x4,
 	BBOX_SIMILARITY    = 0x8,
+	BORDER_SIMILARITY  = 0x10,
 };
 
 #define HIST_SIZE 25
@@ -54,7 +55,7 @@ public:
 			std::cerr << "Error! Weights are not one channel float " << weights << std::endl;
 			return 0.f;
 		}
-		if (weights.total() != 5) {
+		if (weights.total() != 6) {
 			std::cerr << "Error! Not enough weights: " << weights << std::endl;
 			return 0.f;
 		}
@@ -96,7 +97,12 @@ public:
 			bbox_similarity += weights.at<float>(3) * (1.f - float(bbox_size - size - b->size) / im_size);
 		}
 
-		float weight = color_similarity + texture_similarity + size_similarity + bbox_similarity + weights.at<float>(4);
+		float border_similarity = 0.f;
+		if (flags & BORDER_SIMILARITY) {
+			border_similarity = weights.at<float>(4) * std::max(neighbours[b_->id] / float(perimeter), neighbours[b_->id] / float(b_->perimeter));
+		}
+
+		float weight = color_similarity + texture_similarity + size_similarity + bbox_similarity + border_similarity + weights.at<float>(5);
 		return weight == 0.f ? 1.f : weight;
 	}
 
@@ -104,6 +110,7 @@ public:
 		const FeaturesSegment * b = dynamic_cast<const FeaturesSegment *>(b_);
 		std::shared_ptr<Segment> s_ = std::make_shared<FeaturesSegment>(-1, nchannels, im_size_cv, flags, weights);
 		FeaturesSegment * s = dynamic_cast<FeaturesSegment *>(s_.get());
+		s->perimeter = perimeter + b->perimeter;
 		s->size = size + b->size;
 #ifdef DEBUG
 		cv::bitwise_or(mask, b->mask, s->mask);
@@ -123,12 +130,21 @@ public:
 			s->texture_hist[i] = (size * texture_hist[i] + b->size * b->texture_hist[i]) / s->size;
 		//s.texture_hist = (size * texture_hist + b->size * b->texture_hist) / s.size;
 
-
 		s->history.insert(history.begin(), history.end());
 		s->history.insert(b->history.begin(), b->history.end());
 
-		s->neighbours.insert(neighbours.begin(), neighbours.end());
-		s->neighbours.insert(b->neighbours.begin(), b->neighbours.end());
+		for (auto n: neighbours) {
+			if (s->neighbours.find(n.first) == s->neighbours.end())
+				s->neighbours.insert(n);
+			else
+				s->neighbours[n.first] += n.second;
+		}
+		for (auto n: b->neighbours) {
+			if (s->neighbours.find(n.first) == s->neighbours.end())
+				s->neighbours.insert(n);
+			else
+				s->neighbours[n.first] += n.second;
+		}
 
 		for (const auto & h: s->history)
 			s->neighbours.erase(h);
@@ -139,7 +155,7 @@ public:
 	std::ostream & output(std::ostream & out) const {
 		out << "<id: " << id << "; size: " << size << "; im_size: " << im_size << "; bbox: " << bbox() << "; neighbours: [";
 		for (auto n: neighbours)
-			out << n << ", ";
+			out << n.first << ", ";
 		return out << "]>";
 	}
 

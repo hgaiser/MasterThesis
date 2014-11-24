@@ -39,10 +39,18 @@ target_link_libraries(random
 	${OBJECTNESS_LIBRARIES}
 )
 
-add_library(level_selection MODULE src/levels.cpp src/conversion.cpp)
-set_target_properties(level_selection PROPERTIES PREFIX "")
-target_link_libraries(level_selection
+add_library(ss_selection MODULE src/stochastic.cpp src/conversion.cpp)
+set_target_properties(ss_selection PROPERTIES PREFIX "")
+target_link_libraries(ss_selection
 	${Boost_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PYTHON_LIBRARIES}
 )
+
+#add_library(level_selection MODULE src/levels.cpp src/conversion.cpp)
+#set_target_properties(level_selection PROPERTIES PREFIX "")
+#target_link_libraries(level_selection
+#	${Boost_LIBRARIES}
+#	${OpenCV_LIBRARIES}
+#	${PYTHON_LIBRARIES}
+#)

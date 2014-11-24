@@ -118,8 +118,8 @@ cv::Mat get_bboxes_(cv::Mat image, cv::Mat seg, cv::Mat edge, uint8_t flags, uin
 	}
 
 #ifdef DEBUG
-	cv::Mat gray;
-	cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+	cv::Mat gray = image;
+	//cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 	cv::namedWindow("Segment", cv::WINDOW_NORMAL);
 	for (auto s: final_segments) {
 		cv::Mat display;
@@ -164,7 +164,7 @@ int main(int argc, char * argv[]) {
 		return 0;
 	}
 
-	cv::Mat image = cv::imread(argv[1]);
+	cv::Mat image = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);
 	cv::Mat seg = cv::imread(argv[2], cv::IMREAD_UNCHANGED);
 	cv::Mat edge = cv::imread(argv[3], cv::IMREAD_UNCHANGED);
 	uint8_t iterations = atoi(argv[4]);

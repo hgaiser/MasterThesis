@@ -1,4 +1,4 @@
-// #define DEBUG 1
+//#define DEBUG 1
 
 //#include "CVBoostConverter.hpp"
 #include <random>
@@ -38,7 +38,7 @@ enum SegmentType {
 	ST_OBJECTNESS,
 };
 
-cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & edge, uint8_t flags, const cv::Mat & weights, uint32_t n, std::string selection_prior, std::string segment_type) {
+cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & edge, uint8_t flags, const cv::Mat & weights, uint32_t n, std::string selection_prior, std::string segment_type, float threshold) {
 	double max_id_;
 	cv::minMaxIdx(seg, nullptr, &max_id_);
 	int max_id = max_id_;
@@ -79,7 +79,7 @@ cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & 
 	}
 
 	{
-		AdjacencyMatrix adjacency(max_id + 1);
+		//AdjacencyMatrix adjacency(max_id + 1);
 		for (int i = 0; i < image.rows; i++) {
 			for (int j = 0; j < image.cols; j++) {
 				cv::Point p(j, i);
@@ -88,8 +88,8 @@ cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & 
 
 				if (i < image.rows - 1) {
 					uint16_t n = seg.at<uint16_t>(i+1, j);
-					if (n != id && adjacency.get(id, n) == false) {
-						adjacency.get(id, n) = true;
+					if (n != id) {// && adjacency.get(id, n) == false) {
+						//adjacency.get(id, n) = true;
 						segments[id]->addNeighbour(n);
 						segments[n]->addNeighbour(id);
 					}
@@ -97,8 +97,8 @@ cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & 
 
 				if (j < image.cols - 1) {
 					uint16_t n = seg.at<uint16_t>(i, j+1);
-					if (n != id && adjacency.get(id, n) == false) {
-						adjacency.get(id, n) = true;
+					if (n != id) { // && adjacency.get(id, n) == false) {
+						//adjacency.get(id, n) = true;
 						segments[id]->addNeighbour(n);
 						segments[n]->addNeighbour(id);
 					}
@@ -150,7 +150,7 @@ cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & 
 
 	for (uint32_t i = 0; i < n; i++) {
 		std::shared_ptr<Segment> s = segments[prior.poll()];
-		RandomStoppingCriterion stop;
+		RandomStoppingCriterion stop(threshold);
 		cv::Rect r(s->min_p, s->max_p);
 
 		while (s->neighbours.size() && stop.stop(image, r) == false) {
@@ -164,7 +164,7 @@ cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & 
 			std::vector<Connection> connections;
 			//std::cout << "neighbours:" << std::endl;
 			for (auto n: s->neighbours) {
-				connections.push_back(Connection(s->id, n, s->computeSimilarity(segments[n].get())));
+				connections.push_back(Connection(s->id, n.first, s->computeSimilarity(segments[n.first].get())));
 				sum += (connections.end() - 1)->similarity;
 				//std::cout << n << ", ";
 			}
@@ -237,13 +237,13 @@ cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & 
 	return bboxes;
 }
 
-PyObject * get_bboxes(PyObject * image_, PyObject * seg_, PyObject * edge_, uint8_t flags, PyObject * weights_, uint32_t n, std::string selection_prior, std::string segment_type) {
+PyObject * get_bboxes(PyObject * image_, PyObject * seg_, PyObject * edge_, uint8_t flags, PyObject * weights_, uint32_t n, std::string selection_prior, std::string segment_type, float threshold) {
 	NDArrayConverter cvt;
 	cv::Mat image   = cvt.toMat(image_);
 	cv::Mat seg     = cvt.toMat(seg_);
 	cv::Mat edge    = cvt.toMat(edge_);
 	cv::Mat weights = cvt.toMat(weights_);
-	return cvt.toNDArray(get_bboxes_(image, seg, edge, flags, weights, n, selection_prior, segment_type));
+	return cvt.toNDArray(get_bboxes_(image, seg, edge, flags, weights, n, selection_prior, segment_type, threshold));
 }
 
 static void init_ar() {
@@ -276,7 +276,7 @@ int main(int argc, char * argv[]) {
 	weights.at<float>(2) = 6.65155577f;
 	weights.at<float>(3) = 1.16613659f;
 	weights.at<float>(4) = -7.59423175f;
-	weights = cv::Mat::ones(1, 5, CV_32FC1);
+	weights = cv::Mat::ones(1, 6, CV_32FC1);
 
 // 	cv::namedWindow("Image", cv::WINDOW_NORMAL);
 // 	cv::imshow("Image", (seg == 338) * 255);
@@ -285,7 +285,7 @@ int main(int argc, char * argv[]) {
 // 	cv::namedWindow("Image", cv::WINDOW_NORMAL);
 //	while (cv::waitKey() != 'q') {
 		std::clock_t begin = std::clock();
-		cv::Mat bboxes = get_bboxes_(image, seg, edge, COLOR_SIMILARITY /*| TEXTURE_SIMILARITY*/  | SIZE_SIMILARITY | BBOX_SIMILARITY, weights, iterations, selection_prior, segment_type); 
+		cv::Mat bboxes = get_bboxes_(image, seg, edge, COLOR_SIMILARITY /*| TEXTURE_SIMILARITY*/  | SIZE_SIMILARITY | BBOX_SIMILARITY, weights, iterations, selection_prior, segment_type, 0.85f); 
 		std::clock_t end = std::clock();
 		double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 		std::cout << "Times passed in seconds: " << elapsed_secs << std::endl;

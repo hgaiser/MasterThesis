@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_map>
 #include <opencv2/opencv.hpp>
 
 class Segment
@@ -10,6 +11,7 @@ public:
 		mask(cv::Mat::zeros(size, CV_8UC1)),
 #endif
 		id(id),
+		perimeter(0),
 		size(0),
 		min_p(size.width, size.height),
 		max_p(0, 0),
@@ -30,7 +32,11 @@ public:
 	}
 
 	inline void addNeighbour(int n) {
-		neighbours.insert(n);
+		if (neighbours.find(n) == neighbours.end())
+			neighbours.insert({n, 1});
+		else
+			neighbours[n]++;
+		perimeter++;
 	}
 
 	virtual float computeSimilarity(const Segment * b_) = 0;
@@ -49,8 +55,9 @@ public:
 		return cv::Rect(min_p, max_p);
 	}
 
+	int perimeter;
 	int size;
-	std::set<int> neighbours;
+	std::unordered_map<int, int> neighbours;
 	std::set<int> history;
 #ifdef DEBUG
 	cv::Mat mask;

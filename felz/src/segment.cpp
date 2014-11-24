@@ -12,6 +12,7 @@ using namespace boost::python;
 
 PyObject * segment(PyObject * image_, float sigma, int k, int min_size) {
 	NDArrayConverter cvt;
+    int ndims = PyArray_NDIM(image_);
 	cv::Mat image = cvt.toMat(image_);
 	return cvt.toNDArray(segment_image(image, sigma, k, min_size));
 }
@@ -42,7 +43,7 @@ int main(int argc, char **argv) {
 	int k = atoi(argv[2]);
 	int min_size = atoi(argv[3]);
 	
-	cv::Mat image = cv::imread(argv[4]);
+	cv::Mat image = cv::imread(argv[4], cv::IMREAD_GRAYSCALE);
 	//cv::resize(image, image, cv::Size(image.cols * 0.4, image.rows * 0.4));
 	//int num_ccs; 
 

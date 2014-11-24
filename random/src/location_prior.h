@@ -2,10 +2,9 @@
 
 #include "selection_prior.h"
 
-const float deviation = 4.f;
-
 class LocationPrior : public SelectionPrior {
 public:
+	LocationPrior(float sigma=4.f) : sigma(sigma) {}
 	virtual SelectionPriorMap computeSelectionPrior(const cv::Mat & image, const std::vector<std::shared_ptr<Segment>> & segments) {
 		SelectionPriorMap prior;
 
@@ -18,7 +17,7 @@ public:
 				continue;
 
 			cv::Point diff = (s->min_p + s->max_p) * 0.5 - center;
-			float likelihood = exp(-diff.dot(diff) / float(radius) * deviation);
+			float likelihood = exp(-diff.dot(diff) / float(radius) * sigma);
 			sum += likelihood;
 			prior.insert({s->id, likelihood});
 // 			std::cout << "size: " << prior.size() << " id: " << s->id << std::endl;
@@ -43,4 +42,7 @@ public:
 
 		return 0;*/
 	}
+
+private:
+	float sigma;
 };

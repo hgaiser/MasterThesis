@@ -3,6 +3,7 @@
 
 #include "segment-graph.h"
 #include <map>
+#include "filter.h"
 
 #define square(x) ((x)*(x))
 //#define COLORED_OUTPUT
@@ -40,7 +41,12 @@ static inline float diff(const cv::Mat & image, int p1, int p2) {
 cv::Mat segment_image(cv::Mat image, float sigma, float c, int min_size) {
 	image.convertTo(image, CV_MAKETYPE(CV_32F, image.channels()));
 	cv::GaussianBlur(image, image, cv::Size(5, 5), sigma);
-	//image = smooth(image, sigma);
+	/*std::vector<cv::Mat> channels;
+	cv::split(image, channels);
+	channels[0] = smooth(channels[0], sigma);
+	channels[1] = smooth(channels[1], sigma);
+	channels[2] = smooth(channels[2], sigma);
+	cv::merge(channels, image);*/
 
 	// build graph
 	std::vector<Edge> edges;

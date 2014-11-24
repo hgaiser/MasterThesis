@@ -56,7 +56,7 @@ public:
 	virtual std::ostream & output(std::ostream & out) const override {
 		out << "<id: " << id << "; size: " << size << "; im_size: " << im_size << "; objectness: " << objectness << "; neighbours: [";
 		for (auto n: neighbours)
-			out << n << ", ";
+			out << n.first << ", ";
 		return out << "]>";
 	}
 
