@@ -24,10 +24,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 #include <vector>
 #include <algorithm>
 #include <cmath>
-// #include "image.h"
+#include "image.h"
 
 /* convolve src with mask.  dst is flipped! */
-/*static void convolve_even(image<float> *src, image<float> *dst, 
+static void convolve_even(image<float> *src, image<float> *dst, 
 			  std::vector<float> &mask) {
   int width = src->width();
   int height = src->height();
@@ -44,22 +44,24 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
       imRef(dst, y, x) = sum;
     }
   }
-}*/
+}
 
 /* convolve src with mask.  dst is flipped! */
-static void convolve_even(const cv::Mat & src, cv::Mat & dst, 
-			  std::vector<float> &mask) {
-  int width = src.cols;
-  int height = src.rows;
+static void convolve_odd(image<float> *src, image<float> *dst, 
+			 std::vector<float> &mask) {
+  int width = src->width();
+  int height = src->height();
   int len = mask.size();
 
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
-      float sum = mask[0] * src.at<float>(y, x);
+      float sum = mask[0] * imRef(src, x, y);
       for (int i = 1; i < len; i++) {
-        sum += mask[i] * (src.at<float>(y, std::max(x-i,0)) + src.at<float>(y, std::min(x+i, width-1)));
+	sum += mask[i] * 
+	  (imRef(src, std::max(x-i,0), y) - 
+	   imRef(src, std::min(x+i, width-1), y));
       }
-      dst.at<float>(y, x) = sum;
+      imRef(dst, y, x) = sum;
     }
   }
 }

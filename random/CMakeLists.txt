@@ -47,6 +47,14 @@ target_link_libraries(ss_selection
 	${PYTHON_LIBRARIES}
 )
 
+add_executable(objectness src/objectness.cpp src/conversion.cpp)
+target_link_libraries(objectness
+	${Boost_LIBRARIES}
+	${OpenCV_LIBRARIES}
+	${PYTHON_LIBRARIES}
+	${OBJECTNESS_LIBRARIES}
+)
+
 #add_library(level_selection MODULE src/levels.cpp src/conversion.cpp)
 #set_target_properties(level_selection PROPERTIES PREFIX "")
 #target_link_libraries(level_selection

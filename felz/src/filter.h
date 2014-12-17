@@ -23,10 +23,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 
 #include <vector>
 #include <cmath>
-// #include "image.h"
+#include "image.h"
 #include "misc.h"
 #include "convolve.h"
-// #include "imconv.h"
+#include "imconv.h"
 
 #define WIDTH 4.0
 
@@ -58,7 +58,7 @@ static std::vector<float> make_ ## name (float sigma) {       \
 MAKE_FILTER(fgauss, exp(-0.5*square(i/sigma)));
 
 /* convolve image with gaussian filter */
-/*static image<float> *smooth(image<float> *src, float sigma) {
+static image<float> *smooth(image<float> *src, float sigma) {
   std::vector<float> mask = make_fgauss(sigma);
   normalize(mask);
 
@@ -69,34 +69,18 @@ MAKE_FILTER(fgauss, exp(-0.5*square(i/sigma)));
 
   delete tmp;
   return dst;
-}*/
-
-/* convolve image with gaussian filter */
-static cv::Mat smooth(const cv::Mat & src, float sigma) {
-  std::vector<float> mask = make_fgauss(sigma);
-  normalize(mask);
-
-  cv::Mat tmp;
-  src.convertTo(tmp, CV_32FC1);
-
-  cv::Mat dst(src.size(), CV_32FC1);
-  cv::Mat tmp2(src.size(), CV_32FC1);
-  convolve_even(tmp, tmp2, mask);
-  convolve_even(tmp2, dst, mask);
-
-  return dst;
 }
 
 /* convolve image with gaussian filter */
-/*cv::Mat smooth(const cv::Mat & src, float sigma) {
+image<float> *smooth(image<uchar> *src, float sigma) {
   image<float> *tmp = imageUCHARtoFLOAT(src);
   image<float> *dst = smooth(tmp, sigma);
   delete tmp;
   return dst;
-}*/
+}
 
 /* compute laplacian */
-/*static image<float> *laplacian(image<float> *src) {
+static image<float> *laplacian(image<float> *src) {
   int width = src->width();
   int height = src->height();
   image<float> *dst = new image<float>(width, height);  
@@ -111,6 +95,6 @@ static cv::Mat smooth(const cv::Mat & src, float sigma) {
     }
   }
   return dst;
-}*/
+}
 
 #endif

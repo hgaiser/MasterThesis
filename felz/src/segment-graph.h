@@ -1,31 +1,38 @@
+/*
+Copyright (C) 2006 Pedro Felzenszwalb
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+*/
+
 #ifndef SEGMENT_GRAPH
 #define SEGMENT_GRAPH
 
-#include "edge.h"
-#include "cluster.h"
+#include <algorithm>
+#include <cmath>
+#include "disjoint-set.h"
 
 // threshold function
 #define THRESHOLD(size, c) (c/size)
 
-int find(std::vector<Cluster> & clusters, int x) {
-	int y = x;
-	while (y != clusters[y].id()) {
-		y = clusters[y].id();
-	}
-	clusters[x].setId(y);
-	return y;
-}
+typedef struct {
+  float w;
+  int a, b;
+} edge;
 
-void join(std::vector<Cluster> & clusters, int x, int y) {
-	if (clusters[x].rank() > clusters[y].rank()) {
-		clusters[y].setId(x);
-		clusters[x].setSize(clusters[x].size() + clusters[y].size());
-	} else {
-		clusters[x].setId(y);
-		clusters[y].setSize(clusters[y].size() + clusters[x].size());
-		if (clusters[x].rank() == clusters[y].rank())
-			clusters[y].setRank(clusters[y].rank() + 1);
-	}
+bool operator<(const edge &a, const edge &b) {
+  return a.w < b.w;
 }
 
 /*
@@ -38,38 +45,39 @@ void join(std::vector<Cluster> & clusters, int x, int y) {
  * edges: array of edges.
  * c: constant for treshold function.
  */
-std::vector<Cluster> segment_graph(int num_vertices, int num_edges, std::vector<Edge> & edges, float c) { 
-	// sort edges by weight
-	std::sort(edges.begin(), edges.begin() + num_edges);
+universe *segment_graph(int num_vertices, int num_edges, edge *edges, 
+			float c) { 
+  // sort edges by weight
+  std::sort(edges, edges + num_edges);
 
-	// make a disjoint-set forest
-	std::vector<Cluster> clusters;
-	clusters.resize(num_vertices);
+  // make a disjoint-set forest
+  universe *u = new universe(num_vertices);
 
-	// init thresholds
-	for (int i = 0; i < num_vertices; i++) {
-		clusters[i].setId(i);
-		clusters[i].setThreshold(THRESHOLD(1,c));
-	}
+  // init thresholds
+  float *threshold = new float[num_vertices];
+  for (int i = 0; i < num_vertices; i++)
+    threshold[i] = THRESHOLD(1,c);
 
-	// for each edge, in non-decreasing weight order...
-	for (int i = 0; i < num_edges; i++) {
-		Edge & edge = edges[i];
+  // for each edge, in non-decreasing weight order...
+  for (int i = 0; i < num_edges; i++) {
+    edge *pedge = &edges[i];
     
-		// components conected by this edge
-		int a = find(clusters, edge.first());
-		int b = find(clusters, edge.second());
-		if (a != b) {
-			if ((edge.weight() <= clusters[a].threshold()) &&
-				(edge.weight() <= clusters[b].threshold())) {
-				join(clusters, a, b);
-				a = find(clusters, a);
-				clusters[a].setThreshold(edge.weight() + THRESHOLD(clusters[a].size(), c));
-			}
-		}
-	}
+    // components conected by this edge
+    int a = u->find(pedge->a);
+    int b = u->find(pedge->b);
+    if (a != b) {
+      if ((pedge->w <= threshold[a]) &&
+	  (pedge->w <= threshold[b])) {
+	u->join(a, b);
+	a = u->find(a);
+	threshold[a] = pedge->w + THRESHOLD(u->size(a), c);
+      }
+    }
+  }
 
-	return clusters;
+  // free up
+  delete threshold;
+  return u;
 }
 
 #endif

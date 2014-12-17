@@ -31,9 +31,9 @@ target_link_libraries(segment_felz
 	${PYTHON_LIBRARIES}
 )
 
-add_executable(segment src/segment.cpp src/conversion.cpp)
-target_link_libraries(segment
-	${Boost_LIBRARIES}
-	${OpenCV_LIBRARIES}
-	${PYTHON_LIBRARIES}
-)
+#add_executable(segment src/segment.cpp src/conversion.cpp)
+#target_link_libraries(segment
+#	${Boost_LIBRARIES}
+#	${OpenCV_LIBRARIES}
+#	${PYTHON_LIBRARIES}
+#)
