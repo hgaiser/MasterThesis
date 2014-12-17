@@ -6,8 +6,8 @@
 class Connection
 {
 public:
-	Connection(Segment a_, Segment b_, uint8_t flags) :
-		a(a_.id), b(b_.id), similarity(exp(Segment::computeSimilarity(a_, b_, flags)))
+	Connection(Segment & a_, Segment & b_, uint8_t flags) :
+		a(a_.id), b(b_.id), similarity(Segment::computeSimilarity(a_, b_, flags))
 	{
 	}
 
@@ -42,12 +42,28 @@ public:
 				s.neighbours.insert(n);
 		}
 
+		std::set<int> added;
 		for (auto it = connections.begin(); it != connections.end(); ) {
-			if (it->a == a || it->a == b || it->b == a || it->b == b) {
-				similarity_sum -= it->similarity;
-				it = connections.erase(it);
+			if (it->a == a || it->a == b) {
+				if (added.find(it->b) != added.end())
+					it = connections.erase(it);
+				else {
+					it->a = s.id;
+					it->similarity = Segment::computeSimilarity(s, segments[it->b], flags);
+					added.insert(it->b);
+					it++;
+				}
 			}
-			else
+			else if (it->b == a || it->b == b) {
+				if (added.find(it->a) != added.end())
+					it = connections.erase(it);
+				else {
+					it->b = s.id;
+					it->similarity = Segment::computeSimilarity(s, segments[it->a], flags);
+					added.insert(it->a);
+					it++;
+				}
+			} else
 				it++;
 		}
 
@@ -56,10 +72,12 @@ public:
 			neighbour.neighbours.erase(a);
 			neighbour.neighbours.erase(b);
 			neighbour.neighbours.insert(s.id);
-			Connection c(s, neighbour, flags);
-			connections.push_back(c);
-			similarity_sum += c.similarity;
 		}
+
+		for (auto & h: a_.history)
+			s.history.insert(h);
+		for (auto & h: b_.history)
+			s.history.insert(h);
 
 		segments.push_back(s);
 	}
@@ -74,7 +92,7 @@ public:
 
 	int a;
 	int b;
-	float similarity;
+	double similarity;
 };
 
 #endif

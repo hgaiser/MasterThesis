@@ -33,10 +33,11 @@ public:
 	{
 		color_hist.assign(nchannels * HIST_SIZE, 0.f);
 		texture_hist.assign(HIST_SIZE, 0.f);
+		history.insert(id);
 	}
 
 	template<typename _Tp, int n>
-	void addPoint(cv::Vec<_Tp, n> col, uint8_t text, cv::Point point) {
+	void addPoint(cv::Vec<_Tp, n> & col, uint8_t text, cv::Point point) {
 		size++;
 
 		for (int i = 0; i < n; i++)
@@ -59,7 +60,7 @@ public:
 		cv::normalize(texture_hist, texture_hist, 1, 0, cv::NORM_L1);
 	}
 
-	static float computeSimilarity(Segment a, Segment b, uint8_t flags)
+	static double computeSimilarity(Segment & a, Segment & b, uint8_t flags)
 	{
 		if (a.im_size != b.im_size) {
 			std::cerr << "Error! Segments are from different images?" << std::endl;
@@ -74,7 +75,7 @@ public:
 			return 0.f;
 		}
 
-		float similarity = 0.f;
+		double similarity = 0.f;
 
 		if (flags & COLOR_SIMILARITY) {
 			for (uint64_t i = 0; i < a.color_hist.size(); i++)
@@ -87,14 +88,14 @@ public:
 		}
 
 		if (flags & SIZE_SIMILARITY) {
-			similarity += 1.f - float(a.size + b.size) / a.im_size;
+			similarity += 1.0 - double(a.size + b.size) / a.im_size;
 		}
 
 		if (flags & BBOX_SIMILARITY) {
 			cv::Point min_p(min(a.min_p.x, b.min_p.x), min(a.min_p.y, b.min_p.y));
 			cv::Point max_p(max(a.max_p.x, b.max_p.x), max(a.max_p.y, b.max_p.y));
 			int bbox_size = (max_p.x - min_p.x) * (max_p.y - min_p.y);
-			similarity += 1.f - float(bbox_size - a.size - b.size) / a.im_size;
+			similarity += 1.f - double(bbox_size - a.size - b.size) / a.im_size;
 		}
 
 		return similarity;
@@ -112,8 +113,9 @@ public:
 	}
 
 	std::set<int> neighbours;
+	std::set<int> history;
 	cv::Mat mask;
-	int size;
+	double size;
 	int im_size;
 	cv::Size im_size_cv;
 	std::vector<float> color_hist;

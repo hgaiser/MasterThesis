@@ -62,7 +62,9 @@ cv::Mat get_bboxes_(cv::Mat image, cv::Mat seg, cv::Mat edge, uint8_t flags, uin
 	float similarity_sum = 0.f;
 	{
 		AdjacencyMatrix adjacency(max_id + 1);
-		for (auto & s: segments) {
+		//for (auto & s: segments) {
+		for (auto it = segments.rbegin(); it != segments.rend(); it++) {
+			auto & s = *it;
 			s.normalizeHistogram();
 			for (auto n: s.neighbours) {
 				if (adjacency.get(s.id, n) == false) {
@@ -75,36 +77,61 @@ cv::Mat get_bboxes_(cv::Mat image, cv::Mat seg, cv::Mat edge, uint8_t flags, uin
 		}
 	}
 
-	std::vector<Segment> final_segments(segments);
-	bool stochastic = iterations > 1;
-	for (uint8_t i = 0; i < iterations; i++) {
-		std::vector<Connection> connections_(connections);
-		std::vector<Segment> segments_(segments);
-		float similarity_sum_ = similarity_sum;
-		while (connections_.size() != 0) {
-			std::uniform_real_distribution<float> dis(0.f, similarity_sum_);
-			std::sort(connections_.begin(), connections_.end());
-			float sum = 0.f;
-			float rnd = dis(gen_);
-			for (auto it = connections_.begin(); it != connections_.end(); it++) {
-				sum += it->similarity;
-				if (sum >= rnd || stochastic == false) {
-					similarity_sum_ -= it->similarity;
-					Connection c = *it;
-					connections_.erase(it);
-					c.merge(connections_, segments_, flags, similarity_sum_);
-					break;
-				}
-			}
-		}
+// 	std::vector<Segment> final_segments(segments);
+// 	bool stochastic = iterations > 1;
+// 	for (uint8_t i = 0; i < iterations; i++) {
+// 		std::vector<Connection> connections_(connections);
+// 		std::vector<Segment> segments_(segments);
+// 		float similarity_sum_ = similarity_sum;
+// 		while (connections_.size() != 0) {
+// 			std::uniform_real_distribution<float> dis(0.f, similarity_sum_);
+// 			std::sort(connections_.begin(), connections_.end());
+// 			float sum = 0.f;
+// 			float rnd = dis(gen_);
+// 			for (auto it = connections_.begin(); it != connections_.end(); it++) {
+// 				sum += it->similarity;
+// 				std::cout << *it << " " << segments_[it->a].size << " " << segments_[it->b].size << " " << it->similarity << std::endl;
+// 				if (sum >= rnd || stochastic == false) {
+// 					similarity_sum_ -= it->similarity;
+// 					Connection c = *it;
+// 					connections_.erase(it);
+// 					c.merge(connections_, segments_, flags, similarity_sum_);
+// 					std::cout << "size: " << segments_.rbegin()->size << std::endl;
+// 					break;
+// 				}
+// 			}
+// 		}
+// 
+// 		final_segments.insert(final_segments.end(), segments_.begin() + segments.size(), segments_.end());
+// 	}
 
-		final_segments.insert(final_segments.end(), segments_.begin() + segments.size(), segments_.end());
+// 	std::swap(connections[372], connections[373]);
+
+// 	cv::Mat similarity(connections.size(), 1, CV_64FC1);
+// 	int index = 0;
+// 	for (auto & c: connections) {
+// 		similarity.at<double>(index++) = c.similarity;
+// 	}
+// 	return similarity;
+
+	while (connections.size() != 0) {
+		std::stable_sort(connections.begin(), connections.end());
+// 		std::cout << connections.begin()->similarity << " " << connections.rbegin()->similarity << " SIMILARITY" << std::endl;
+		Connection c = *connections.begin();
+// 		std::cout << c << " " << segments.rbegin()->bbox().tl() << " " << segments.rbegin()->bbox().br() << " " << (*(connections.begin() + 1)) << std::endl;
+		connections.erase(connections.begin());
+		c.merge(connections, segments, flags, similarity_sum);
 	}
 
 	cv::Mat bboxes;
-	for (auto s: final_segments) {
+	for (auto s: segments) {
 		if (s.size == 0)
 			continue;
+// 
+// 		std::cout << s.id << " " << s.size << " " << s.bbox() << "[ ";
+// 		for (auto & h: s.history)
+// 			std::cout << h << ", ";
+// 		std::cout << " ]" << std::endl;
 
 		cv::Mat bbox = cv::Mat(1, 4, CV_32SC1);
 		bbox.at<int>(0) = s.min_p.x;

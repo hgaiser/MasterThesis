@@ -40,13 +40,13 @@ static inline float diff(const cv::Mat & image, int p1, int p2) {
  */
 cv::Mat segment_image(cv::Mat image, float sigma, float c, int min_size) {
 	image.convertTo(image, CV_MAKETYPE(CV_32F, image.channels()));
-	cv::GaussianBlur(image, image, cv::Size(5, 5), sigma);
-	/*std::vector<cv::Mat> channels;
+// 	cv::GaussianBlur(image, image, cv::Size(5, 5), sigma);
+	std::vector<cv::Mat> channels;
 	cv::split(image, channels);
 	channels[0] = smooth(channels[0], sigma);
 	channels[1] = smooth(channels[1], sigma);
 	channels[2] = smooth(channels[2], sigma);
-	cv::merge(channels, image);*/
+	cv::merge(channels, image);
 
 	// build graph
 	std::vector<Edge> edges;

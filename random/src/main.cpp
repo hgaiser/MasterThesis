@@ -155,7 +155,7 @@ cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & 
 
 		while (s->neighbours.size() && stop.stop(image, r) == false) {
 #ifdef DEBUG
-			cv::Mat red = edge * 0.5;
+			cv::Mat red = cv::Mat::zeros(seg.size(), CV_8UC1);//edge * 0.5;
 			cv::Mat green;
 			s->mask.copyTo(green);
 			green *= 255;
