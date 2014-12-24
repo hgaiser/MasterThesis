@@ -8,7 +8,7 @@
 
 #include "connection.h"
 #include "adjacency.h"
-// #include "location_prior.h"
+#include "location_prior.h"
 
 #include "random_stopping_criterion.h"
 
@@ -19,7 +19,7 @@ std::random_device rd_;
 std::mt19937 gen_(rd_());
 
 cv::Mat get_bboxes_(const cv::Mat & seg, uint32_t max_size, float sigma, uint32_t n) {
-	//LocationPrior lp(sigma);
+	LocationPrior lp(sigma);
 
 	double max_id_;
 	cv::minMaxIdx(seg, nullptr, &max_id_);
@@ -64,6 +64,8 @@ cv::Mat get_bboxes_(const cv::Mat & seg, uint32_t max_size, float sigma, uint32_
 	cv::Mat bboxes;
 	float similarity_sum = 0.f;
 	for (auto & s: segments) {
+		if (s->size == 0)
+			continue;
 		cv::Mat bbox = cv::Mat(1, 4, CV_32SC1);
 		bbox.at<int>(0) = s->min_p.x;
 		bbox.at<int>(1) = s->min_p.y;
@@ -75,21 +77,21 @@ cv::Mat get_bboxes_(const cv::Mat & seg, uint32_t max_size, float sigma, uint32_
 			cv::vconcat(bboxes, bbox, bboxes);
 	}
 
-// 	SelectionPriorMap prior;
-// 
-// 	prior = lp.computeSelectionPrior(image, segments);
-// #ifdef DEBUG
-// 	prior.visualize(seg);
-// #endif
+	SelectionPriorMap prior;
+
+	prior = lp.computeSelectionPrior(seg, segments);
+#ifdef DEBUG
+	prior.visualize(seg);
+#endif
 
 #ifdef DEBUG
 	cv::namedWindow("SelectionLikelihood", cv::WINDOW_AUTOSIZE);
 #endif
 
 	for (uint32_t i = 0; i < n; i++) {
-// 		std::shared_ptr<Segment> s = segments[prior.poll()];
+		std::shared_ptr<Segment> s = segments[prior.poll()];
+// 		std::shared_ptr<Segment> s = segments[rand() % segments.size()];
 		uint32_t seg_size = rand() % max_size;
-		std::shared_ptr<Segment> s = segments[rand() % segments.size()];
 		//RandomStoppingCriterion stop(threshold);
 		cv::Rect r(s->min_p, s->max_p);
 

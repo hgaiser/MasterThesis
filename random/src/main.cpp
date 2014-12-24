@@ -38,7 +38,7 @@ enum SegmentType {
 	ST_OBJECTNESS,
 };
 
-cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & edge, uint8_t flags, const cv::Mat & weights, uint32_t n, std::string selection_prior, std::string segment_type, float threshold) {
+cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & edge, uint8_t flags, const cv::Mat & weights, uint32_t n, std::string selection_prior, std::string segment_type, uint32_t max_size) {
 	double max_id_;
 	cv::minMaxIdx(seg, nullptr, &max_id_);
 	int max_id = max_id_;
@@ -150,10 +150,14 @@ cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & 
 
 	for (uint32_t i = 0; i < n; i++) {
 		std::shared_ptr<Segment> s = segments[prior.poll()];
-		RandomStoppingCriterion stop(threshold);
+		//RandomStoppingCriterion stop(threshold);
+		uint32_t seg_size = rand() % max_size;
 		cv::Rect r(s->min_p, s->max_p);
 
-		while (s->neighbours.size() && stop.stop(image, r) == false) {
+		for (int j = 0; j < seg_size; j++) {
+		//while (s->neighbours.size() && stop.stop(image, r) == false) {
+			if (s->neighbours.size() == 0)
+				break;
 #ifdef DEBUG
 			cv::Mat red = cv::Mat::zeros(seg.size(), CV_8UC1);//edge * 0.5;
 			cv::Mat green;
@@ -237,13 +241,13 @@ cv::Mat get_bboxes_(const cv::Mat & image, const cv::Mat & seg, const cv::Mat & 
 	return bboxes;
 }
 
-PyObject * get_bboxes(PyObject * image_, PyObject * seg_, PyObject * edge_, uint8_t flags, PyObject * weights_, uint32_t n, std::string selection_prior, std::string segment_type, float threshold) {
+PyObject * get_bboxes(PyObject * image_, PyObject * seg_, PyObject * edge_, uint8_t flags, PyObject * weights_, uint32_t n, std::string selection_prior, std::string segment_type, uint32_t max_size) {
 	NDArrayConverter cvt;
 	cv::Mat image   = cvt.toMat(image_);
 	cv::Mat seg     = cvt.toMat(seg_);
 	cv::Mat edge    = cvt.toMat(edge_);
 	cv::Mat weights = cvt.toMat(weights_);
-	return cvt.toNDArray(get_bboxes_(image, seg, edge, flags, weights, n, selection_prior, segment_type, threshold));
+	return cvt.toNDArray(get_bboxes_(image, seg, edge, flags, weights, n, selection_prior, segment_type, max_size));
 }
 
 static void init_ar() {
@@ -285,7 +289,7 @@ int main(int argc, char * argv[]) {
 // 	cv::namedWindow("Image", cv::WINDOW_NORMAL);
 //	while (cv::waitKey() != 'q') {
 		std::clock_t begin = std::clock();
-		cv::Mat bboxes = get_bboxes_(image, seg, edge, COLOR_SIMILARITY /*| TEXTURE_SIMILARITY*/  | SIZE_SIMILARITY | BBOX_SIMILARITY, weights, iterations, selection_prior, segment_type, 0.85f); 
+		cv::Mat bboxes = get_bboxes_(image, seg, edge, COLOR_SIMILARITY /*| TEXTURE_SIMILARITY*/  | SIZE_SIMILARITY | BBOX_SIMILARITY, weights, iterations, selection_prior, segment_type, 18);
 		std::clock_t end = std::clock();
 		double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 		std::cout << "Times passed in seconds: " << elapsed_secs << std::endl;
